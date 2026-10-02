@@ -117,13 +117,19 @@ export class MenuComponent {
   }
 
   onView(item: MenuItem): void {
-    this.analytics.trackViewItem(item.id, item.name, item.price, item.category);
+    this.analytics.trackViewItem(
+      item.id,
+      item.name,
+      item.price,
+      item.category,
+      this.table.currentTable ?? undefined
+    );
   }
 
   add(item: MenuItem): void {
     const qty = this.qtyOf(item.id);
     this.order.addToCart(item, qty);
-    this.analytics.trackAddToCart({ item, quantity: qty });
+    this.analytics.trackAddToCart({ item, quantity: qty }, this.table.currentTable ?? undefined);
     this.quantities.set(item.id, 1);
   }
 }

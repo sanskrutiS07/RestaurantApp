@@ -18,6 +18,7 @@ declare global {
 export class AnalyticsService {
   private readonly experiment = inject(ExperimentService);
   private loaded = false;
+  private readonly debugMode = new URLSearchParams(window.location.search).has('ga_debug');
 
   init(): void {
     const id = environment.gaMeasurementId;
@@ -36,7 +37,7 @@ export class AnalyticsService {
       window.dataLayer!.push(arguments);
     } as unknown as (...args: unknown[]) => void;
     window.gtag('js', new Date());
-    window.gtag('config', id, { send_page_view: false });
+    window.gtag('config', id, { send_page_view: false, debug_mode: this.debugMode });
     window.gtag('set', 'user_properties', {
       experiment_variant: this.experiment.variant,
     });
@@ -47,6 +48,7 @@ export class AnalyticsService {
     if (!window.gtag) return;
     window.gtag('event', eventName, {
       ...params,
+      debug_mode: this.debugMode,
       experiment_variant: this.experiment.variant,
     });
   }
@@ -63,18 +65,20 @@ export class AnalyticsService {
     this.track('select_table', { table_number: table });
   }
 
-  trackViewItem(itemId: string, itemName: string, price: number, category: string): void {
+  trackViewItem(itemId: string, itemName: string, price: number, category: string, table?: number): void {
     this.track('view_item', {
-      currency: 'USD',
+      currency: 'INR',
       value: price,
+      table_number: table,
       items: [{ item_id: itemId, item_name: itemName, item_category: category, price }],
     });
   }
 
-  trackAddToCart(line: CartLine): void {
+  trackAddToCart(line: CartLine, table?: number): void {
     this.track('add_to_cart', {
-      currency: 'USD',
+      currency: 'INR',
       value: line.item.price * line.quantity,
+      table_number: table,
       items: [{
         item_id: line.item.id,
         item_name: line.item.name,
@@ -85,10 +89,41 @@ export class AnalyticsService {
     });
   }
 
-  trackBeginCheckout(lines: CartLine[], value: number): void {
-    this.track('begin_checkout', {
-      currency: 'USD',
+  trackRemoveFromCart(line: CartLine, table?: number): void {
+    this.track('remove_from_cart', {
+      currency: 'INR',
+      value: line.item.price * line.quantity,
+      table_number: table,
+      items: [{
+        item_id: line.item.id,
+        item_name: line.item.name,
+        item_category: line.item.category,
+        price: line.item.price,
+        quantity: line.quantity,
+      }],
+    });
+  }
+
+  trackViewCart(lines: CartLine[], value: number, table?: number): void {
+    this.track('view_cart', {
+      currency: 'INR',
       value,
+      table_number: table,
+      items: lines.map((l) => ({
+        item_id: l.item.id,
+        item_name: l.item.name,
+        item_category: l.item.category,
+        price: l.item.price,
+        quantity: l.quantity,
+      })),
+    });
+  }
+
+  trackBeginCheckout(lines: CartLine[], value: number, table?: number): void {
+    this.track('begin_checkout', {
+      currency: 'INR',
+      value,
+      table_number: table,
       items: lines.map((l) => ({
         item_id: l.item.id,
         item_name: l.item.name,
@@ -102,7 +137,7 @@ export class AnalyticsService {
     this.track('purchase', {
       transaction_id: orderId,
       table_number: table,
-      currency: 'USD',
+      currency: 'INR',
       value,
       tax,
       items: lines.map((l) => ({

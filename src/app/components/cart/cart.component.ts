@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { AsyncPipe, CurrencyPipe } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { AnalyticsService } from '../../services/analytics.service';
@@ -74,7 +74,7 @@ import { TableService } from '../../services/table.service';
     .note { color: var(--muted); font-size: 0.75rem; text-align: center; }
   `],
 })
-export class CartComponent {
+export class CartComponent implements OnInit {
   readonly order = inject(OrderService);
   readonly table = inject(TableService);
   private readonly analytics = inject(AnalyticsService);
@@ -82,19 +82,37 @@ export class CartComponent {
 
   readonly taxRate = TAX_RATE;
 
+  ngOnInit(): void {
+    if (this.order.cart.length === 0) return;
+    const { total } = this.order.cartTotals();
+    this.analytics.trackViewCart(this.order.cart, total, this.table.currentTable ?? undefined);
+  }
+
   get totals() {
     return this.order.cartTotals();
   }
 
   inc(id: string, q: number): void {
+    const line = this.order.cart.find((l) => l.item.id === id);
+    if (line) {
+      this.analytics.trackAddToCart({ item: line.item, quantity: 1 }, this.table.currentTable ?? undefined);
+    }
     this.order.setQuantity(id, q + 1);
   }
 
   dec(id: string, q: number): void {
+    const line = this.order.cart.find((l) => l.item.id === id);
+    if (line) {
+      this.analytics.trackRemoveFromCart({ item: line.item, quantity: 1 }, this.table.currentTable ?? undefined);
+    }
     this.order.setQuantity(id, q - 1);
   }
 
   remove(id: string): void {
+    const line = this.order.cart.find((l) => l.item.id === id);
+    if (line) {
+      this.analytics.trackRemoveFromCart(line, this.table.currentTable ?? undefined);
+    }
     this.order.removeFromCart(id);
   }
 
@@ -105,7 +123,7 @@ export class CartComponent {
       return;
     }
     const { total } = this.order.cartTotals();
-    this.analytics.trackBeginCheckout(this.order.cart, total);
+    this.analytics.trackBeginCheckout(this.order.cart, total, table);
     const order = this.order.placeOrder(table);
     this.analytics.trackPurchase(order.orderId, table, order.total, order.tax, order.lines);
     this.router.navigate(['/bill']);
