@@ -1,6 +1,7 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { AsyncPipe, CurrencyPipe, NgIf } from '@angular/common';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive, RouterOutlet, NavigationEnd } from '@angular/router';
+import { filter } from 'rxjs';
 import { AnalyticsService } from './services/analytics.service';
 import { ExperimentService } from './services/experiment.service';
 import { OrderService } from './services/order.service';
@@ -58,9 +59,14 @@ export class AppComponent implements OnInit {
   readonly experiment = inject(ExperimentService);
   readonly order = inject(OrderService);
   readonly table = inject(TableService);
+  readonly router = inject(Router);
 
   ngOnInit(): void {
     this.analytics.init();
+    this.analytics.trackPageView(this.router.url, document.title);
+    this.router.events.pipe(filter((event) => event instanceof NavigationEnd)).subscribe((event) => {
+      this.analytics.trackPageView((event as NavigationEnd).urlAfterRedirects, document.title);
+    });
     document.body.classList.toggle('variant-b', this.experiment.isB);
   }
 }

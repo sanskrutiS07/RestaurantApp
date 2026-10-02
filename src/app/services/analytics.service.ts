@@ -36,7 +36,7 @@ export class AnalyticsService {
       window.dataLayer!.push(arguments);
     } as unknown as (...args: unknown[]) => void;
     window.gtag('js', new Date());
-    window.gtag('config', id, { send_page_view: true });
+    window.gtag('config', id, { send_page_view: false });
     window.gtag('set', 'user_properties', {
       experiment_variant: this.experiment.variant,
     });
@@ -48,6 +48,14 @@ export class AnalyticsService {
     window.gtag('event', eventName, {
       ...params,
       experiment_variant: this.experiment.variant,
+    });
+  }
+
+  trackPageView(pagePath: string, pageTitle?: string): void {
+    this.track('page_view', {
+      page_location: window.location.origin + pagePath,
+      page_path: pagePath,
+      page_title: pageTitle ?? document.title,
     });
   }
 
