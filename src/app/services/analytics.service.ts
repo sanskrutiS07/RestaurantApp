@@ -30,7 +30,11 @@ export class AnalyticsService {
     document.head.appendChild(script);
 
     window.dataLayer = window.dataLayer ?? [];
-    window.gtag = (...args: unknown[]) => window.dataLayer!.push(args);
+    // gtag expects queued entries in the same shape as the official snippet
+    // (`arguments` object), not a plain array.
+    window.gtag = function () {
+      window.dataLayer!.push(arguments);
+    } as unknown as (...args: unknown[]) => void;
     window.gtag('js', new Date());
     window.gtag('config', id, { send_page_view: true });
     window.gtag('set', 'user_properties', {
